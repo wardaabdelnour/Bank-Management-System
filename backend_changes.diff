@@ -1,0 +1,269 @@
+6a7,8
+> #include <cstdlib>
+> #include "bank_backend.h"   // struct sClients now lives here (moved unchanged)
+12,18d13
+< struct sClients {
+< 	string AccountNumber;
+< 	string PinCode;
+< 	string Name;
+< 	double Balance;
+< 	bool MarkForDeletion;
+< };
+138a134,215
+> // ---------------------------------------------------------------------------
+> // Shared save/apply helpers.
+> // These contain lines that used to sit inline inside the console functions
+> // below. They were moved here, unchanged, so the console menu and the Qt GUI
+> // run exactly the same code. The console functions now call them.
+> // ---------------------------------------------------------------------------
+> 
+> // Appends the LAST client of the vector to Bank.txt (was inline in AddNewClient).
+> void SaveLastClientToFile(vector<sClients>& Vclient)
+> {
+> 	vector<sClients> NewClient;
+> 	NewClient.push_back(Vclient.back());
+> 
+> 	string lines = ConvertRecordToLine(NewClient, "#//#");
+> 	SaveToFile("Bank.txt", lines);
+> }
+> 
+> // Rewrites Bank.txt without the clients marked for deletion (was inline in DeleteClient).
+> void SaveClientsNotMarkedForDeletion(vector<sClients>& Vclient)
+> {
+> 	string lines;
+> 	for (int i = 0; i < Vclient.size(); i++) {
+> 		if (Vclient[i].MarkForDeletion == false) {
+> 
+> 			lines += Vclient[i].AccountNumber + "#//#";
+> 			lines += Vclient[i].PinCode + "#//#";
+> 			lines += Vclient[i].Name + "#//#";
+> 			lines += to_string(Vclient[i].Balance);
+> 			lines += "\n";
+> 		}
+> 	}
+> 	SaveToFile("Bank.txt", lines, false);
+> }
+> 
+> // Rewrites Bank.txt with every client (was inline in Update / Deposit / withdraw).
+> void SaveAllClientsToFile(vector<sClients>& Vclient)
+> {
+> 	string lines = ConvertRecordToLine(Vclient, "#//#");
+> 	SaveToFile("Bank.txt", lines, false);
+> }
+> 
+> // Was inline in UpdateClient.
+> void ApplyClientUpdate(vector<sClients>& Vclient, int i, string PinCode, string Name, double Balance)
+> {
+> 	Vclient[i].PinCode = PinCode;
+> 	Vclient[i].Name = Name;
+> 	Vclient[i].Balance = Balance;
+> 
+> 	SaveAllClientsToFile(Vclient);
+> }
+> 
+> // Was inline in Deposit.
+> void ApplyDeposit(vector<sClients>& Vclient, int i, double depositAmount)
+> {
+> 	Vclient[i].Balance += depositAmount;
+> 
+> 	SaveAllClientsToFile(Vclient);
+> }
+> 
+> // Was inline in withdraw: the "amount <= balance" rule.
+> bool HasSufficientBalance(vector<sClients>& Vclient, int i, double withdrawAmount)
+> {
+> 	return withdrawAmount <= Vclient[i].Balance;
+> }
+> 
+> // Was inline in withdraw.
+> void ApplyWithdraw(vector<sClients>& Vclient, int i, double withdrawAmount)
+> {
+> 	Vclient[i].Balance -= withdrawAmount;
+> 
+> 	SaveAllClientsToFile(Vclient);
+> }
+> 
+> // Was the "+=" inside the TotalBalances loop.
+> double CalculateTotalBalances(const vector<sClients>& Vclient)
+> {
+> 	double totalBalances = 0.0;
+> 	for (int i = 0; i < Vclient.size(); i++)
+> 		totalBalances += Vclient[i].Balance;
+> 	return totalBalances;
+> }
+> 
+206,210c283
+< 		vector<sClients> NewClient;
+< 		NewClient.push_back(Vclient.back());
+< 
+< 		string lines = ConvertRecordToLine(NewClient, "#//#");
+< 		SaveToFile("Bank.txt", lines);
+---
+> 		SaveLastClientToFile(Vclient);
+241d313
+< 	string lines;
+246,256c318
+< 		for (int i = 0; i < Vclient.size(); i++) {
+< 			if (Vclient[i].MarkForDeletion == false) {
+< 
+< 				lines += Vclient[i].AccountNumber + "#//#";
+< 				lines += Vclient[i].PinCode + "#//#";
+< 				lines += Vclient[i].Name + "#//#";
+< 				lines += to_string(Vclient[i].Balance);
+< 				lines += "\n";
+< 			}
+< 		}
+< 		SaveToFile("Bank.txt", lines, false);
+---
+> 		SaveClientsNotMarkedForDeletion(Vclient);
+295,299c357
+< 					Vclient[i].PinCode = client.PinCode;
+< 					Vclient[i].Name = client.Name;
+< 					Vclient[i].Balance = client.Balance;
+< 
+< 					string lines = ConvertRecordToLine(Vclient,"#//#");
+---
+> 					ApplyClientUpdate(Vclient, i, client.PinCode, client.Name, client.Balance);
+301,302d358
+< 					SaveToFile("Bank.txt", lines, false);
+< 				
+444,447c500
+< 				Vclient[i].Balance += depositAmount;
+< 
+< 				string lines = ConvertRecordToLine(Vclient, "#//#");
+< 				SaveToFile("Bank.txt", lines, false);
+---
+> 				ApplyDeposit(Vclient, i, depositAmount);
+476c529
+< 			 if (withdrawAmount <= Vclient[i].Balance) {
+---
+> 			 if (HasSufficientBalance(Vclient, i, withdrawAmount)) {
+481,484c534
+< 					 Vclient[i].Balance -= withdrawAmount;
+< 
+< 					 string lines = ConvertRecordToLine(Vclient, "#//#");
+< 					 SaveToFile("Bank.txt", lines, false);
+---
+> 					 ApplyWithdraw(Vclient, i, withdrawAmount);
+502c552
+< 	 double totalBalances=0.0 ;
+---
+> 	 double totalBalances = CalculateTotalBalances(Vclient);
+521d570
+< 		 totalBalances += Vclient[i].Balance;
+581a631,739
+> // ===========================================================================
+> // Console-free entry points used by the Qt GUI (declared in bank_backend.h).
+> // They take their values as parameters instead of cin, and report the outcome
+> // through a return code instead of cout. Everything else - loading, matching
+> // the account number, the "amount <= balance" rule, and saving - is the same
+> // code the console menu above uses.
+> // ===========================================================================
+> 
+> // Account-number match used by the functions below (same comparison as the console loops).
+> int FindClientIndex(const vector<sClients>& Vclient, const string& AccountNumber)
+> {
+> 	for (int i = 0; i < Vclient.size(); i++) {
+> 		if (AccountNumber == Vclient[i].AccountNumber)
+> 			return i;
+> 	}
+> 	return -1;
+> }
+> 
+> enOpResult AddClientRecord(vector<sClients>& Vclient, const sClients& NewClient)
+> {
+> 	Vclient = LoadDataFromFile("Bank.txt");
+> 
+> 	if (IsClientExist(Vclient, NewClient.AccountNumber))   // original uniqueness check
+> 		return OpAlreadyExists;
+> 
+> 	Vclient.push_back(NewClient);
+> 	Vclient.back().MarkForDeletion = false;
+> 
+> 	SaveLastClientToFile(Vclient);
+> 	return OpOk;
+> }
+> 
+> enOpResult FindClientRecord(vector<sClients>& Vclient, const string& AccountNumber, sClients& Found)
+> {
+> 	Vclient = LoadDataFromFile("Bank.txt");
+> 
+> 	int i = FindClientIndex(Vclient, AccountNumber);
+> 	if (i < 0)
+> 		return OpNotFound;
+> 
+> 	Found = Vclient[i];
+> 	return OpOk;
+> }
+> 
+> enOpResult DeleteClientRecord(vector<sClients>& Vclient, const string& AccountNumber)
+> {
+> 	Vclient = LoadDataFromFile("Bank.txt");
+> 
+> 	bool found = false;
+> 	for (int i = 0; i < Vclient.size(); i++) {
+> 		if (AccountNumber == Vclient[i].AccountNumber) {
+> 			Vclient[i].MarkForDeletion = true;
+> 			found = true;
+> 		}
+> 	}
+> 	if (!found)
+> 		return OpNotFound;
+> 
+> 	SaveClientsNotMarkedForDeletion(Vclient);
+> 	return OpOk;
+> }
+> 
+> enOpResult UpdateClientRecord(vector<sClients>& Vclient, const string& AccountNumber,
+> 	const string& PinCode, const string& Name, double Balance)
+> {
+> 	Vclient = LoadDataFromFile("Bank.txt");
+> 
+> 	int i = FindClientIndex(Vclient, AccountNumber);
+> 	if (i < 0)
+> 		return OpNotFound;
+> 
+> 	ApplyClientUpdate(Vclient, i, PinCode, Name, Balance);
+> 	return OpOk;
+> }
+> 
+> enOpResult DepositToClient(vector<sClients>& Vclient, const string& AccountNumber,
+> 	double Amount, double& NewBalance)
+> {
+> 	Vclient = LoadDataFromFile("Bank.txt");
+> 
+> 	int i = FindClientIndex(Vclient, AccountNumber);
+> 	if (i < 0)
+> 		return OpNotFound;
+> 
+> 	ApplyDeposit(Vclient, i, Amount);
+> 	NewBalance = Vclient[i].Balance;
+> 	return OpOk;
+> }
+> 
+> enOpResult WithdrawFromClient(vector<sClients>& Vclient, const string& AccountNumber,
+> 	double Amount, double& NewBalance)
+> {
+> 	Vclient = LoadDataFromFile("Bank.txt");
+> 
+> 	int i = FindClientIndex(Vclient, AccountNumber);
+> 	if (i < 0)
+> 		return OpNotFound;
+> 
+> 	if (!HasSufficientBalance(Vclient, i, Amount))
+> 		return OpInsufficientFunds;
+> 
+> 	ApplyWithdraw(Vclient, i, Amount);
+> 	NewBalance = Vclient[i].Balance;
+> 	return OpOk;
+> }
+> 
+> // The Qt project defines BANK_GUI, so its own main() (in main.cpp) is used.
+> // Build this file without BANK_GUI and you get the original console program.
+> #ifndef BANK_GUI
+584c742
+< 	
+---
+> 
+589a748
+> #endif

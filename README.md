@@ -1,23 +1,67 @@
-# Bank Management System - Qt GUI
+# Bank Management System
 
-Qt Widgets front end for the original console bank program.
+A desktop banking management application built with **C++ and Qt**, combining a C++ backend with a graphical user interface for managing client records and banking operations.
 
-## Open, build, run (Qt Creator, Windows)
-1. File > Open File or Project... > select `BankGUI.pro` (or `CMakeLists.txt`).
-2. Pick a Qt 5.15+ or Qt 6 Desktop kit (MinGW or MSVC) and click Configure Project.
-3. Build (Ctrl+B) and Run (Ctrl+R).
+## Overview
 
-## Where Bank.txt goes
-The backend opens `Bank.txt` by relative name, exactly as before. At start-up the app
-looks for an existing `Bank.txt` in: the working directory, then the .exe folder and up to
-4 parent folders (plus their direct sub-folders, which covers the project folder next to the build folder). Easiest: put your `Bank.txt` next to
-`BankGUI.pro`. The path in use is shown at the bottom of the sidebar. If none exists,
-it is created in the working directory when the first client is added.
+Bank Management System is a desktop application designed to make basic banking operations easier to navigate through a graphical interface. The project focuses on applying C++ programming concepts, file handling, and GUI development using Qt.
 
-## Files
-- `bank_project.cpp` - your original backend (see `backend_changes.diff`)
-- `bank_backend.h` - `sClients` (moved here unchanged) + declarations of the GUI-callable functions
-- `main.cpp`, `mainwindow.h`, `mainwindow.cpp` - the GUI (no .ui file; widgets are built in code)
-- `BankGUI.pro` / `CMakeLists.txt` - project files (both define `BANK_GUI`)
+## Features
 
-To build the original console program again, compile `bank_project.cpp` without `BANK_GUI`.
+- **Client Management:** Manage client records and account information.
+- **Deposit and Withdrawal:** Perform basic balance transactions.
+- **Client Data Storage:** Store and retrieve client records using file handling.
+- **Graphical User Interface:** Interact with the application through a Qt-based desktop interface.
+- **Backend Integration:** Connect the GUI to the existing C++ application logic.
+
+## Technologies Used
+
+- C++
+- Qt / Qt Widgets
+- Qt Creator
+- File Handling
+- Object-Oriented Programming
+
+## Project Structure
+
+The project contains the C++ source files, header files, and Qt project configuration required to build the application. The exact structure depends on the project configuration.
+
+## Getting Started
+
+### Prerequisites
+
+- Qt compatible with the project's configuration.
+- Qt Creator or another compatible build environment.
+- A supported C++ compiler and build tools.
+
+### Build and Run
+
+1. Clone or download this repository.
+2. Open the `.pro` file or `CMakeLists.txt` in Qt Creator, depending on the project configuration.
+3. Select a compatible Qt kit and compiler.
+4. Configure and build the project.
+5. Run the application.
+
+**Note:** The project may require its data file to be present in the expected working directory. Use test data when running the application.
+
+## What I Learned
+
+- Applying C++ concepts to a practical desktop application.
+- Working with file-based data storage.
+- Connecting an existing backend to a graphical user interface.
+- Building and testing a desktop application using Qt.
+
+## Future Improvements
+
+- Input validation and stronger error handling.
+- Improved data persistence and transaction reliability.
+- More comprehensive testing.
+- Database integration and enhanced security.
+
+## Author
+
+**Warda Abdelnour**
+
+Computer Science Student | C++ Developer | Problem Solver
+
+[GitHub](https://github.com/wardaabdelnour) · [LinkedIn](https://linkedin.com/in/warda-abd-el-nour-577614375/)
